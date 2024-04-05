@@ -51,9 +51,7 @@ func dedupLoop(w *fsnotify.Watcher) {
 
 		// Callback we run.
 		printEvent = func(e fsnotify.Event) {
-			log.Print(e.String())
 			processFiles(e)
-
 			// Don't need to remove the timer if you don't have a lot of files.
 			mu.Lock()
 			delete(timers, e.Name)
