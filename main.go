@@ -3,12 +3,12 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"image"
 	"image/jpeg"
 	"log"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -26,8 +26,9 @@ import (
 var client *nkn.MultiClient
 var lastSegment []byte
 var thumbnail []byte
-var title string = "Mutsi's all day adventure ⚔🛡"
+var config *Config
 
+var viewers *Viewers
 var viewerAddresses []string
 
 var segmentSendConfig = &nkn.MessageConfig{
@@ -58,6 +59,12 @@ func main() {
 	fmt.Println("")
 
 	fmt.Println("")
+
+	var err error
+	config, err = NewConfig("./config.json")
+	if err != nil {
+		panic(err)
+	}
 
 	//Try without password first
 	obs, err := goobs.New("localhost:4455")
@@ -95,7 +102,7 @@ func main() {
 	client = createClient()
 	<-client.OnConnect.C
 
-	viewers := NewViewers(30 * time.Second)
+	viewers = NewViewers(30 * time.Second)
 	viewers.StartCleanup(time.Second)
 	defer viewers.Cleanup()
 
@@ -107,82 +114,48 @@ func main() {
 	fmt.Println("connected to NKN")
 	fmt.Println("Your address", client.Address())
 
-	// Create new watcher.
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatal(err)
+	dedup(streamPath)
+}
+
+func processFiles(event fsnotify.Event) {
+	if strings.HasSuffix(event.Name, ".png") {
+		resizeAndCacheScreenshot(event.Name)
+		return
 	}
-	defer watcher.Close()
+	if strings.HasSuffix(event.Name, ".ts") {
+		b, err := os.ReadFile(event.Name)
+		if err != nil {
+			// panic(err)
+			fmt.Println(err)
+			return
+		}
 
-	// Start listening for events.
-	go func() {
-		prevName := ""
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				if event.Has(fsnotify.Write) && strings.HasSuffix(event.Name, ".png") {
-					resizeAndCacheScreenshot(event.Name)
-					continue
-				}
-				if event.Has(fsnotify.Create) && strings.HasSuffix(event.Name, ".ts") {
-					name := prevName
-					prevName = event.Name
+		viewerAddresses = viewers.GetAddresses()
 
-					if len(name) == 0 {
-						continue
-					}
+		fmt.Println("Broadcasting video segment to: ", len(viewerAddresses), "viewers")
 
-					b, err := os.ReadFile(name)
-					if err != nil {
-						// panic(err)
-						fmt.Println(err)
-						continue
-					}
-
-					viewerAddresses = viewers.GetAddresses()
-
-					fmt.Println("Broadcasting video segment to: ", len(viewerAddresses), "viewers")
-
-					if len(viewerAddresses) > 0 {
-						_, err = client.Send(nkn.NewStringArray(viewers.GetAddresses()...), b, segmentSendConfig)
-						if err != nil {
-							panic(err)
-						}
-					}
-					lastSegment = b
-
-					err = os.Remove(name)
-					if err != nil {
-						fmt.Println(err)
-					}
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				fmt.Println("error:", err)
+		if len(viewerAddresses) > 0 {
+			_, err = client.Send(nkn.NewStringArray(viewers.GetAddresses()...), b, segmentSendConfig)
+			if err != nil {
+				panic(err)
 			}
 		}
-	}()
+		lastSegment = b
 
-	// Add a path.
-	err = watcher.Add(streamPath)
-	if err != nil {
-		log.Fatal(err)
+		err = os.Remove(event.Name)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
-
-	reader := bufio.NewReader(os.Stdin)
-	reader.ReadLine()
-
-	runtime.Goexit()
-	os.Exit(0)
 }
 
 func createClient() *nkn.MultiClient {
-	account, _ := nkn.NewAccount(nil)
+	seed, _ := hex.DecodeString(config.Seed)
+	account, err := nkn.NewAccount(seed)
+	if err != nil {
+		log.Panic(err)
+	}
+
 	client, _ := nkn.NewMultiClient(account, "", 4, false, &nkn.ClientConfig{
 		ConnectRetries: 10,
 	})
@@ -265,7 +238,7 @@ func resizeAndCacheScreenshot(path string) {
 func announceStream() {
 	go func() {
 		for {
-			client.Subscribe("", "noice", 100, title, nil)
+			client.Subscribe("", "noice", 100, config.Title, nil)
 			time.Sleep(20 * 100 * time.Second)
 		}
 	}()

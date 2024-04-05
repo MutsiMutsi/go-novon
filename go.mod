@@ -20,6 +20,7 @@ require (
 	github.com/itchyny/base58-go v0.0.5 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/nknorg/ncp-go v1.0.5 // indirect
+	github.com/nknorg/nkn v1.1.7-beta
 	github.com/nknorg/nkn-sdk-go v1.4.7
 	github.com/nknorg/nkn/v2 v2.1.7 // indirect
 	github.com/nknorg/nkngomobile v0.0.0-20220615081414-671ad1afdfa9 // indirect
