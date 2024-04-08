@@ -34,7 +34,6 @@ require (
 	github.com/andreykaipov/goobs v1.2.3
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/golang/protobuf v1.5.2
-	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.0.0 // indirect
