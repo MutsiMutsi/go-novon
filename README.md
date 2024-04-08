@@ -1,5 +1,5 @@
-# go-noice
-A decentralised video streaming host client to stream from OBS to Noice
+# go-novon
+A decentralised video streaming host client to stream from OBS to novon
 
 # Prerequisites
 
@@ -15,7 +15,7 @@ Ensure that the "Enable Websockets" checkbox is selected.
 
 Authentication (Optional)
 
-If your OBS WebSocket server requires authentication, note down the server password. This will be prompted during the go-noice application startup.
+If your OBS WebSocket server requires authentication, note down the server password. This will be prompted during the go-novon application startup.
 
 HLS Recording Output:
 
@@ -33,4 +33,4 @@ Set the Keyframe Interval to 1s.
 
 # Start streaming!
 Make sure OBS is running, setup your scene as normal, but you do not have to start streaming or recording.
-The application will automatically detect the HLS recording path from OBS Studio and initiate the streaming process to the noice platform.
+The application will automatically detect the HLS recording path from OBS Studio and initiate the streaming process to the novon platform.

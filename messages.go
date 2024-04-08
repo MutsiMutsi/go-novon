@@ -7,6 +7,8 @@ import (
 	"github.com/nknorg/nkn-sdk-go"
 )
 
+var chatId uint64 = 0
+
 // Message struct represents a generic message with a type and content
 type Message struct {
 	Type    string          `json:"type"`
@@ -14,7 +16,9 @@ type Message struct {
 }
 
 type ChatMessage struct {
+	Id   uint64 `json:"id,string"`
 	Text string `json:"text"`
+	Hash string `json:"hash"`
 	Src  string `json:"src"`
 }
 
@@ -29,28 +33,42 @@ func DecodeMessage(receivedMessage *nkn.Message) {
 	// Handle the message based on its type
 	switch msg.Type {
 	case "chat-message":
-		chatMsg := ChatMessage{
+		chatMsg := &ChatMessage{
 			Src: receivedMessage.Src,
 		}
 		if err := json.Unmarshal(msg.Content, &chatMsg); err != nil {
 			fmt.Println("Error unmarshalling message content:", err)
 			return
 		}
-		HandleChatMessage(chatMsg, receivedMessage.Src)
+		HandleChatMessage(chatMsg, receivedMessage)
 	default:
 		fmt.Println("Unknown message type:", msg.Type)
 	}
 }
 
-func HandleChatMessage(msg ChatMessage, src string) {
-	fmt.Println("Message:", msg.Text)
+func HandleChatMessage(msg *ChatMessage, nknMessage *nkn.Message) {
+	go func() {
+		fmt.Println("Message:", msg.Text)
 
-	binary, err := json.Marshal(msg)
-	if err != nil {
-		panic(err)
-	}
-	_, err = client.Send(nkn.NewStringArray(viewerAddresses...), binary, segmentSendConfig)
-	if err != nil {
-		panic(err)
-	}
+		err := ValidateDonation(msg, true)
+		if err != nil {
+			fmt.Println("donation validation error", err.Error())
+			nknMessage.Reply([]byte("error: donation validation error - " + err.Error()))
+			return
+		} else {
+			nknMessage.Reply([]byte("success"))
+		}
+
+		msg.Id = chatId
+		chatId++
+
+		binary, err := json.Marshal(msg)
+		if err != nil {
+			panic(err)
+		}
+		_, err = client.Send(nkn.NewStringArray(viewerAddresses...), binary, segmentSendConfig)
+		if err != nil {
+			panic(err)
+		}
+	}()
 }

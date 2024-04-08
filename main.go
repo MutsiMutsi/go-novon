@@ -40,7 +40,7 @@ var streamPath = ""
 const SCREENSHOT_HOTKEY string = "OBSBasic.Screenshot"
 
 func main() {
-	fmt.Println("Welcome to go-noice a golang client for OBS streaming to noice")
+	fmt.Println("Welcome to go-novon a golang client for OBS streaming to novon")
 	fmt.Println("")
 	fmt.Println("Make sure you have websockets enabled in OBS under Tools -> WebSocket Server Settings")
 	fmt.Println("If you have authentication enabled take note of the server password this will be required")
@@ -54,7 +54,7 @@ func main() {
 	fmt.Println("Scroll down to the Encoder Settings and set the following configuration")
 	fmt.Println("Keyframe Interval:'1s'")
 	fmt.Println("")
-	fmt.Println("go-noice will automatically detect the recording path and start broadcasting to noice")
+	fmt.Println("go-novon will automatically detect the recording path and start broadcasting to novon")
 	fmt.Println("")
 	fmt.Println("")
 
@@ -67,19 +67,30 @@ func main() {
 	}
 
 	//Try without password first
+	//error(*net.OpError)
+
 	obs, err := goobs.New("localhost:4455")
 	if err != nil {
 		for {
-			reader := bufio.NewReader(os.Stdin)
-			fmt.Print("OBS WebSocket password (leave empty if no password is used): ")
-			password, _ := reader.ReadString('\n')
+			if err.Error() == "websocket: close 4009: Authentication failed." {
+				reader := bufio.NewReader(os.Stdin)
+				fmt.Print("OBS WebSocket password: ")
+				password, _ := reader.ReadString('\n')
 
-			fmt.Println(password)
-			obs, err = goobs.New("localhost:4455", goobs.WithPassword(strings.TrimSpace(password)))
-			if err != nil {
-				fmt.Println(err.Error())
+				fmt.Println(password)
+				obs, err = goobs.New("localhost:4455", goobs.WithPassword(strings.TrimSpace(password)))
+				if err != nil {
+					fmt.Println(err.Error())
+				} else {
+					break
+				}
 			} else {
-				break
+				fmt.Println("could not find a running OBS instance")
+				time.Sleep(time.Second)
+				obs, err = goobs.New("localhost:4455")
+				if err == nil {
+					break
+				}
 			}
 		}
 	}
@@ -189,6 +200,11 @@ func receiveMessages(client *nkn.MultiClient, viewers *Viewers) {
 				if err != nil {
 					fmt.Println(err.Error())
 				}
+			} else if len(msg.Data) == 10 && string(msg.Data[:]) == "donationid" {
+				err := msg.Reply([]byte(generateDonationEntry()))
+				if err != nil {
+					fmt.Println(err.Error())
+				}
 			} else {
 				DecodeMessage(msg)
 			}
@@ -238,7 +254,7 @@ func resizeAndCacheScreenshot(path string) {
 func announceStream() {
 	go func() {
 		for {
-			client.Subscribe("", "noice", 100, config.Title, nil)
+			client.Subscribe("", "novon", 100, config.Title, nil)
 			time.Sleep(20 * 100 * time.Second)
 		}
 	}()

@@ -1,0 +1,10 @@
+syntax = "proto3";
+option go_package = "./pb";
+
+package pb;
+
+message TransferAsset {
+	bytes sender    = 1;
+	bytes recipient = 2;
+	int64 amount    = 3;
+}
