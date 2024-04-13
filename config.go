@@ -13,6 +13,7 @@ import (
 type Config struct {
 	Seed  string `json:"seed"`
 	Title string `json:"title"`
+	Owner string `json:"owner"`
 }
 
 // NewConfig reads the configuration file from a specified location and populates defaults

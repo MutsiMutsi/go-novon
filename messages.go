@@ -20,6 +20,7 @@ type ChatMessage struct {
 	Text string `json:"text"`
 	Hash string `json:"hash"`
 	Src  string `json:"src"`
+	Role string `json:"role"`
 }
 
 func DecodeMessage(receivedMessage *nkn.Message) {
@@ -60,15 +61,15 @@ func HandleChatMessage(msg *ChatMessage, nknMessage *nkn.Message) {
 		}
 
 		msg.Id = chatId
+		if msg.Src == config.Owner {
+			msg.Role = "owner"
+		}
 		chatId++
 
 		binary, err := json.Marshal(msg)
 		if err != nil {
 			panic(err)
 		}
-		_, err = client.Send(nkn.NewStringArray(viewerAddresses...), binary, segmentSendConfig)
-		if err != nil {
-			panic(err)
-		}
+		publish(binary)
 	}()
 }

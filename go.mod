@@ -44,7 +44,7 @@ require (
 	github.com/nknorg/nkn v1.1.7-beta
 	github.com/nknorg/nkn-sdk-go v1.4.7
 	github.com/nknorg/nkn/v2 v2.2.0 // indirect
-	github.com/nknorg/nkngomobile v0.0.0-20220615081414-671ad1afdfa9 // indirect
+	github.com/nknorg/nkngomobile v0.0.0-20220615081414-671ad1afdfa9
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pbnjay/memory v0.0.0-20190104145345-974d429e7ae4 // indirect

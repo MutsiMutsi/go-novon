@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"image"
@@ -24,12 +25,18 @@ import (
 )
 
 var client *nkn.MultiClient
+
+const NUM_SUB_CLIENTS = 96
+const VIEWER_SUB_CLIENTS = 3
+const CHUNK_SIZE = 64000
+
+var segmentId = 0
+
 var lastSegment []byte
 var thumbnail []byte
 var config *Config
 
 var viewers *Viewers
-var viewerAddresses []string
 
 var segmentSendConfig = &nkn.MessageConfig{
 	Unencrypted: true,
@@ -57,7 +64,6 @@ func main() {
 	fmt.Println("go-novon will automatically detect the recording path and start broadcasting to novon")
 	fmt.Println("")
 	fmt.Println("")
-
 	fmt.Println("")
 
 	var err error
@@ -65,9 +71,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	//Try without password first
-	//error(*net.OpError)
 
 	obs, err := goobs.New("localhost:4455")
 	if err != nil {
@@ -97,6 +100,19 @@ func main() {
 
 	defer obs.Disconnect()
 
+	directoryResponse, _ := obs.Config.GetRecordDirectory()
+	streamPath = directoryResponse.RecordDirectory
+
+	fmt.Println("Stream path found: ", streamPath)
+
+	client = createClient()
+	for i := 0; i < NUM_SUB_CLIENTS; i++ {
+		<-client.OnConnect.C
+	}
+
+	fmt.Println("connected to NKN")
+	fmt.Println("Your address", client.Address())
+
 	recordStatus, _ := obs.Record.GetRecordStatus()
 	if !recordStatus.OutputActive {
 		obs.Record.StartRecord()
@@ -105,13 +121,6 @@ func main() {
 	} else {
 		fmt.Println("OBS is recording")
 	}
-	directoryResponse, _ := obs.Config.GetRecordDirectory()
-	streamPath = directoryResponse.RecordDirectory
-
-	fmt.Println("Stream path found: ", streamPath)
-
-	client = createClient()
-	<-client.OnConnect.C
 
 	viewers = NewViewers(30 * time.Second)
 	viewers.StartCleanup(time.Second)
@@ -122,10 +131,16 @@ func main() {
 	receiveMessages(client, viewers)
 	takeScreenshot(obs)
 
-	fmt.Println("connected to NKN")
-	fmt.Println("Your address", client.Address())
-
+	//Attack()
 	dedup(streamPath)
+}
+
+func Attack() {
+	//SPAM ATTACK
+	for i := 0; i < 1000; i++ {
+		rngAddr, _ := nkn.RandomBytes(32)
+		viewers.AddOrUpdateAddress(hex.EncodeToString(rngAddr))
+	}
 }
 
 func processFiles(event fsnotify.Event) {
@@ -141,14 +156,15 @@ func processFiles(event fsnotify.Event) {
 			return
 		}
 
-		viewerAddresses = viewers.GetAddresses()
+		//Segment the data to max CHUNK_SIZE chunks
+		chunks := ChunkByByteSizeWithMetadata(b, CHUNK_SIZE, segmentId)
+		segmentId++
 
 		fmt.Println("Broadcasting video segment to: ", len(viewerAddresses), "viewers")
 
 		if len(viewerAddresses) > 0 {
-			_, err = client.Send(nkn.NewStringArray(viewers.GetAddresses()...), b, segmentSendConfig)
-			if err != nil {
-				panic(err)
+			for _, chunk := range chunks {
+				publish(chunk)
 			}
 		}
 		lastSegment = b
@@ -167,8 +183,9 @@ func createClient() *nkn.MultiClient {
 		log.Panic(err)
 	}
 
-	client, _ := nkn.NewMultiClient(account, "", 4, false, &nkn.ClientConfig{
-		ConnectRetries: 10,
+	client, _ := nkn.NewMultiClient(account, "", NUM_SUB_CLIENTS, false, &nkn.ClientConfig{
+		ConnectRetries:   10,
+		AllowUnencrypted: true,
 	})
 
 	return client
@@ -186,25 +203,16 @@ func receiveMessages(client *nkn.MultiClient, viewers *Viewers) {
 				}
 				//Send last segment to newly joined
 				if isNew {
-					client.Send(nkn.NewStringArray(msg.Src), lastSegment, segmentSendConfig)
+					//client.Send(nkn.NewStringArray(msg.Src), lastSegment, segmentSendConfig)
 				}
 			} else if len(msg.Data) == 9 && string(msg.Data[:]) == "thumbnail" {
-				err := msg.Reply(thumbnail)
-				if err != nil {
-					log.Println(err)
-				}
+				go reply(thumbnail, msg)
 			} else if len(msg.Data) == 10 && string(msg.Data[:]) == "disconnect" {
 				viewers.Remove(msg.Src)
 			} else if len(msg.Data) == 9 && string(msg.Data[:]) == "viewcount" {
-				err := msg.Reply([]byte(strconv.Itoa(len(viewerAddresses))))
-				if err != nil {
-					fmt.Println(err.Error())
-				}
+				go reply([]byte(strconv.Itoa(len(viewerAddresses))), msg)
 			} else if len(msg.Data) == 10 && string(msg.Data[:]) == "donationid" {
-				err := msg.Reply([]byte(generateDonationEntry()))
-				if err != nil {
-					fmt.Println(err.Error())
-				}
+				go reply([]byte(generateDonationEntry()), msg)
 			} else {
 				DecodeMessage(msg)
 			}
@@ -246,7 +254,6 @@ func resizeAndCacheScreenshot(path string) {
 
 		os.Remove(path)
 
-		//thumbnail = base64.StdEncoding.EncodeToString(newImageBytes.Bytes())
 		thumbnail = newImageBytes.Bytes()
 	}()
 }
@@ -258,4 +265,33 @@ func announceStream() {
 			time.Sleep(20 * 100 * time.Second)
 		}
 	}()
+}
+
+func ChunkByByteSizeWithMetadata(data []byte, chunkSize int, segmentId int) [][]byte {
+	if chunkSize <= 0 {
+		panic("chunkSize must be positive")
+	}
+
+	totalChunks := (len(data) / chunkSize) + 1
+	chunks := make([][]byte, 0, totalChunks)
+
+	chunkId := 0
+
+	buffer := bytes.NewBuffer(data)
+	for {
+		chunk := buffer.Next(chunkSize)
+		if len(chunk) == 0 {
+			break
+		}
+
+		prefix := make([]byte, 3*4)
+		binary.LittleEndian.PutUint32(prefix[:4], uint32(segmentId))
+		binary.LittleEndian.PutUint32(prefix[4:8], uint32(chunkId))
+		binary.LittleEndian.PutUint32(prefix[8:], uint32(totalChunks))
+
+		chunks = append(chunks, append(prefix, chunk...))
+		chunkId++
+	}
+
+	return chunks
 }

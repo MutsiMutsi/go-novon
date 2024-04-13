@@ -39,6 +39,11 @@ func ValidateDonation(message *ChatMessage, allowMempool bool) (err error) {
 		donationSum += amount
 	}
 
+	//probably donation0 was included in the message, this is not an actual donation
+	if donationSum == 0 {
+		return nil
+	}
+
 	//donation but no hash always invalid
 	if donationSum > 0 && len(message.Hash) != 64 {
 		return errors.New("no tx hash")
