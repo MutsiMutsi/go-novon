@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://github.com/MutsiMutsi/novon/blob/main/images/card.png" width="480" title="">
+</p>
+
 # go-novon
 A decentralised video streaming host client to stream from OBS to novon
 
