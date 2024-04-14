@@ -32,7 +32,7 @@ const CHUNK_SIZE = 64000
 
 var segmentId = 0
 
-var lastSegment []byte
+var lastSegment [][]byte
 var thumbnail []byte
 var config *Config
 
@@ -167,7 +167,7 @@ func processFiles(event fsnotify.Event) {
 				publish(chunk)
 			}
 		}
-		lastSegment = b
+		lastSegment = chunks
 
 		err = os.Remove(event.Name)
 		if err != nil {
@@ -203,16 +203,24 @@ func receiveMessages(client *nkn.MultiClient, viewers *Viewers) {
 				}
 				//Send last segment to newly joined
 				if isNew {
-					//client.Send(nkn.NewStringArray(msg.Src), lastSegment, segmentSendConfig)
+					for _, chunk := range lastSegment {
+						sendToClient(msg.Src, chunk)
+					}
 				}
 			} else if len(msg.Data) == 9 && string(msg.Data[:]) == "thumbnail" {
 				go reply(thumbnail, msg)
 			} else if len(msg.Data) == 10 && string(msg.Data[:]) == "disconnect" {
 				viewers.Remove(msg.Src)
 			} else if len(msg.Data) == 9 && string(msg.Data[:]) == "viewcount" {
-				go reply([]byte(strconv.Itoa(len(viewerAddresses))), msg)
+				go replyText(strconv.Itoa(len(viewerAddresses)), msg)
 			} else if len(msg.Data) == 10 && string(msg.Data[:]) == "donationid" {
-				go reply([]byte(generateDonationEntry()), msg)
+				go replyText(generateDonationEntry(), msg)
+			} else if len(msg.Data) == 7 && string(msg.Data[:]) == "getrole" {
+				role := ""
+				if msg.Src == config.Owner {
+					role = "owner"
+				}
+				go replyText(role, msg)
 			} else {
 				DecodeMessage(msg)
 			}

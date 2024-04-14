@@ -23,6 +23,10 @@ type ChatMessage struct {
 	Role string `json:"role"`
 }
 
+type DeleteChatMessage struct {
+	MsgId uint64 `json:"msgId,string"`
+}
+
 func DecodeMessage(receivedMessage *nkn.Message) {
 	// Unmarshal the JSON into a Message struct
 	var msg Message
@@ -42,6 +46,18 @@ func DecodeMessage(receivedMessage *nkn.Message) {
 			return
 		}
 		HandleChatMessage(chatMsg, receivedMessage)
+	case "delete-chat-message":
+		{
+			if receivedMessage.Src == config.Owner {
+				var deleteMsg DeleteChatMessage
+				if err := json.Unmarshal(msg.Content, &deleteMsg); err != nil {
+					fmt.Println("Error unmarshalling message content:", err)
+					return
+				}
+
+				publishText(string(receivedMessage.Data))
+			}
+		}
 	default:
 		fmt.Println("Unknown message type:", msg.Type)
 	}
