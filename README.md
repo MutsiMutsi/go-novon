@@ -3,9 +3,14 @@ A decentralised video streaming host client to stream from OBS to novon
 
 # Prerequisites
 
-OBS Studio: https://obsproject.com/download
-Golang: https://go.dev/ (with version 1.17 or above recommended)
+- OBS Studio: https://obsproject.com/download
+- Golang: https://go.dev/ (version 1.20 or above)
 
+# Building from source
+
+1) install the latest go
+2) build the app: ```go build```
+3) run ```./gonovon```
 # OBS configuration
 
 Open OBS Studio.
