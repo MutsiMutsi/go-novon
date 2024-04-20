@@ -59,7 +59,7 @@ func DecodeMessage(receivedMessage *nkn.Message) {
 			}
 		}
 	default:
-		fmt.Println("Unknown message type:", msg.Type)
+		fmt.Println("Unknown message type:", msg.Type, "content:", string(msg.Content))
 	}
 }
 

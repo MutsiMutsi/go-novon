@@ -34,6 +34,8 @@ var segmentSendConfig = &nkn.MessageConfig{
 	NoReply:     true,
 }
 
+var lastRtmpSegment = time.Time{}
+
 func main() {
 	fmt.Println("Welcome to go-novon a golang client for RTMP streaming to novon")
 	fmt.Println("")
@@ -46,26 +48,19 @@ func main() {
 		panic(err)
 	}
 
-	client = createClient()
-	for i := 0; i < NUM_SUB_CLIENTS; i++ {
-		<-client.OnConnect.C
-	}
-
-	fmt.Println("connected to NKN")
-	fmt.Println("Your address", client.Address())
-
 	viewers = NewViewers(30 * time.Second)
 	viewers.StartCleanup(time.Second)
 	defer viewers.Cleanup()
+
+	client = createClient()
 
 	s, ok := core.New(os.Args[1:], publishTSPart)
 	if !ok {
 		os.Exit(1)
 	}
 
-	announceStream()
-
-	receiveMessages(client, viewers)
+	maintainStream()
+	receiveMessages()
 
 	s.Wait()
 }
@@ -90,13 +85,24 @@ func createClient() *nkn.MultiClient {
 		AllowUnencrypted: true,
 	})
 
+	//5% startup connection leniency, improves startup time dramatically with minimal risk for service disruption.
+	for i := 0; i < NUM_SUB_CLIENTS-(NUM_SUB_CLIENTS/20); i++ {
+		<-client.OnConnect.C
+	}
+	fmt.Println("connected to NKN")
+	fmt.Println("Your address", client.Address())
+
 	return client
 }
 
-func receiveMessages(client *nkn.MultiClient, viewers *Viewers) {
+func receiveMessages() {
 	go func() {
 		for {
 			msg := <-client.OnMessage.C
+
+			if msg == nil {
+				continue
+			}
 
 			if len(msg.Data) == 4 && string(msg.Data[:]) == "ping" {
 				isNew := viewers.AddOrUpdateAddress(msg.Src)
@@ -126,16 +132,31 @@ func receiveMessages(client *nkn.MultiClient, viewers *Viewers) {
 			} else {
 				DecodeMessage(msg)
 			}
-
 		}
 	}()
 }
 
-func announceStream() {
+func maintainStream() {
+	isSubscribed := false
+	lastSubscribe := time.Time{}
+
 	go func() {
 		for {
-			client.Subscribe("", "novon", 100, config.Title, nil)
-			time.Sleep(20 * 100 * time.Second)
+			if isBroadcasting() {
+				// We're receiving segments, subscribe if not already, or if we need a resub
+				if !isSubscribed || time.Since(lastSubscribe).Seconds() > 100*20 {
+					lastSubscribe = time.Now()
+					go client.Subscribe("", "novon", 100, config.Title, nil)
+					isSubscribed = true
+				}
+			} else {
+				// No recent segments, unsubscribe if subscribed
+				if isSubscribed {
+					go client.Unsubscribe("", "novon", nil)
+					isSubscribed = false
+				}
+			}
+			time.Sleep(time.Second)
 		}
 	}()
 }
@@ -170,7 +191,8 @@ func ChunkByByteSizeWithMetadata(data []byte, chunkSize int, segmentId int) [][]
 }
 
 func publishTSPart(segment []byte) {
-	log.Println("SHOW TIME", len(segment))
+	lastRtmpSegment = time.Now()
+
 	//Segment the data to max CHUNK_SIZE chunks
 	chunks := ChunkByByteSizeWithMetadata(segment, CHUNK_SIZE, segmentId)
 	segmentId++
@@ -242,4 +264,8 @@ func checkFfmpegInstalled() {
 
 	// ffmpeg is available, continue with your application logic
 	fmt.Println("ffmpeg is installed. Proceeding...")
+}
+
+func isBroadcasting() bool {
+	return time.Since(lastRtmpSegment).Seconds() < 5
 }
