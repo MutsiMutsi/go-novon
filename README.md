@@ -3,6 +3,11 @@
 </p>
 
 # go-novon
+![Go](https://pkg.go.dev/badge/github.com/mutsimutsi/nkn-sdk-go)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/mutsimutsi/go-novon)
+![GitHub Tag](https://img.shields.io/github/v/tag/mutsimutsi/go-novon)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://choosealicense.com/licenses/mit/)
+
 A decentralised video streaming host client to stream RTMP to novon
 
 # Prerequisites
