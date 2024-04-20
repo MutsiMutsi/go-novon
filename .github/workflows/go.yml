@@ -25,7 +25,8 @@ jobs:
       run: go generate
 
     - name: hlsjsdownloader
-      run: cd /home/runner/go/pkg/mod/github.com/mutsimutsi/mediamtx@v1.0.0/internal/servers/hls
+      run: | 
+        cd /home/runner/go/pkg/mod/github.com/mutsimutsi/mediamtx@v1.0.0/internal/servers/hls
         go run ./hlsjsdownloader
 
     - name: Build
