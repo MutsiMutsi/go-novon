@@ -24,6 +24,20 @@ High quality fast moving streams of 1080p 60hz should aim for a 6000kbps video b
 
 Generally lower bitrates provide faster delivery, and allow for more viewers, lower the bitrate if buffering is an issue, or if your source media does not require these high bitrate for a good representation to improve viewer experience.
 
+# Streaming with OBS
+
+- Settings -> Stream
+  - Service: Custom
+  - Server: the location of the running gonovon application, if its on the same machine as your OBS application this would be http://127.0.0.1 or http://localhost
+  - Stream Key: name of your stream host path (this is not displayed on novon.tv but is required and can be used to utilize more features MediaMTX has to offer.
+- Settings -> Output -> Streaming
+  - Video Encoder: x264 or if you have a recent NVIDIA GPU: NVIDIA NVENC H.264
+  - Keyframe interval: 2s
+  - Refer to the previous paragraph for more info on bitrate, codecs, and encoding configuration.
+
+Once go-novon is up and running you can at any time start and stop your stream.
+
+
 # Dependencies
 - MediaMTX - [https://github.com/bluenviron/mediamtx/](https://github.com/bluenviron/mediamtx/) [MIT license]
 
