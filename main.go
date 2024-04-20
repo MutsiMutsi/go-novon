@@ -98,6 +98,13 @@ func createClient() *nkn.MultiClient {
 func receiveMessages() {
 	go func() {
 		for {
+
+			//If we're not broadcasting don't listen.
+			if !isBroadcasting() {
+				time.Sleep(time.Millisecond * 100)
+				continue
+			}
+
 			msg := <-client.OnMessage.C
 
 			if msg == nil {
