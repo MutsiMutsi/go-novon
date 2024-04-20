@@ -11,9 +11,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/nknorg/nkn-sdk-go"
-
 	"github.com/bluenviron/mediamtx/core"
+	"github.com/nknorg/nkn-sdk-go"
 )
 
 var client *nkn.MultiClient
@@ -63,7 +62,6 @@ func main() {
 	if !ok {
 		os.Exit(1)
 	}
-	fmt.Println("RTMP server started")
 
 	announceStream()
 

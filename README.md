@@ -3,43 +3,32 @@
 </p>
 
 # go-novon
-A decentralised video streaming host client to stream from OBS to novon
+A decentralised video streaming host client to stream RTMP to novon
 
 # Prerequisites
 
-- OBS Studio: https://obsproject.com/download
-- Golang: https://go.dev/ (version 1.20 or above)
+- ffmpeg: https://ffmpeg.org/
+- Golang: https://go.dev/ (version 1.21 or above)
 
 # Building from source
 
 1) install the latest go
 2) build the app: ```go build```
 3) run ```./gonovon```
-# OBS configuration
 
-Open OBS Studio.
-Navigate to Tools -> WebSocket Server Settings.
+# Video bitrate, codecs, encoding configuration
 
-Ensure that the "Enable Websockets" checkbox is selected.
+Generally the same as all major streaming platforms, stick to h264 codecs for compatibility.
+Set your keyframe to 2s for a good balance between fast delivery and efficiency.
+High quality fast moving streams of 1080p 60hz should aim for a 6000kbps video bitrate.
 
-Authentication (Optional)
+Generally lower bitrates provide faster delivery, and allow for more viewers, lower the bitrate if buffering is an issue, or if your source media does not require these high bitrate for a good representation to improve viewer experience.
 
-If your OBS WebSocket server requires authentication, note down the server password. This will be prompted during the go-novon application startup.
+# Dependencies
+- MediaMTX - [https://github.com/bluenviron/mediamtx/](https://github.com/bluenviron/mediamtx/) [MIT license]
 
-HLS Recording Output:
+  A fork of MediaMTX is encapsulated to host the RTMP server and mux the stream to MPEG-TS segments for delivery
 
-Open OBS Studio settings.
-Go to the Output tab.
-Set the Output Mode to Advanced.
-Navigate to the Recording tab.
-Set the Recording Format to HLS (.m3u8 + ts).
-Choose your preferred Video Encoder (x264 variant required).
+- nkn-sdk-go - [https://github.com/nknorg/nkn-sdk-go](https://github.com/nknorg/nkn-sdk-go) [Apache-2.0 license]
 
-HLS Recording Encoder Settings:
-
-Scroll down to the Encoder Settings section.
-Set the Keyframe Interval to 1s.
-
-# Start streaming!
-Make sure OBS is running, setup your scene as normal, but you do not have to start streaming or recording.
-The application will automatically detect the HLS recording path from OBS Studio and initiate the streaming process to the novon platform.
+  The nkn network is used to amplify and distribute your video stream by multicasting; minimizing bandwidth requirements for the host while being able to reach a large number of viewers
