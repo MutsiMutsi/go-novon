@@ -121,4 +121,4 @@ replace github.com/pion/webrtc/v3 => github.com/aler9/webrtc/v3 v3.0.0-202311122
 
 replace github.com/bluenviron/gohlslib => github.com/mutsimutsi/gohlslib v1.0.0
 
-replace github.com/bluenviron/mediamtx => github.com/mutsimutsi/mediamtx v1.0.1
+replace github.com/bluenviron/mediamtx => github.com/mutsimutsi/mediamtx v1.0.2
