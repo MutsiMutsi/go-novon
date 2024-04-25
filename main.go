@@ -60,17 +60,10 @@ func main() {
 	}
 
 	maintainStream()
+	loadPanels()
 	receiveMessages()
 
 	s.Wait()
-}
-
-func Attack() {
-	//SPAM ATTACK
-	for i := 0; i < 1000; i++ {
-		rngAddr, _ := nkn.RandomBytes(32)
-		viewers.AddOrUpdateAddress(hex.EncodeToString(rngAddr))
-	}
 }
 
 func createClient() *nkn.MultiClient {
@@ -98,16 +91,20 @@ func createClient() *nkn.MultiClient {
 func receiveMessages() {
 	go func() {
 		for {
-
-			//If we're not broadcasting don't listen.
-			if !isBroadcasting() {
-				time.Sleep(time.Millisecond * 100)
+			msg := <-client.OnMessage.C
+			if msg == nil {
 				continue
 			}
 
-			msg := <-client.OnMessage.C
+			//Always reply to panel, this can be displayed when we are not broadcasting.
+			if len(msg.Data) == 9 && string(msg.Data[:]) == "getpanels" {
+				go replyText(panels, msg)
+				continue
+			}
 
-			if msg == nil {
+			//If we're not broadcasting don't reply to anything.
+			if !isBroadcasting() {
+				time.Sleep(time.Millisecond * 100)
 				continue
 			}
 
