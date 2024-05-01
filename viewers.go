@@ -15,9 +15,10 @@ var viewerSubClientAddresses [VIEWER_SUB_CLIENTS]*nkngomobile.StringArray
 
 // Viewers is a thread-safe collection of message addresses with last receive timestamps.
 type Viewers struct {
-	messages map[string]*messageData
-	mutex    sync.RWMutex
-	timeout  time.Duration
+	messages      map[string]*messageData
+	viewerQuality map[string]int
+	mutex         sync.RWMutex
+	timeout       time.Duration
 }
 
 // messageData holds the last received time for an address.
@@ -28,9 +29,10 @@ type messageData struct {
 // NewViewers creates a new Viewers with a specified timeout duration.
 func NewViewers(timeout time.Duration) *Viewers {
 	return &Viewers{
-		messages: make(map[string]*messageData),
-		mutex:    sync.RWMutex{},
-		timeout:  timeout,
+		messages:      make(map[string]*messageData),
+		viewerQuality: make(map[string]int),
+		mutex:         sync.RWMutex{},
+		timeout:       timeout,
 	}
 }
 
@@ -43,6 +45,7 @@ func (ms *Viewers) AddOrUpdateAddress(address string) (isNew bool) {
 	if !ok {
 		data = &messageData{lastTime: time.Now()}
 		ms.messages[address] = data
+		ms.viewerQuality[address] = 1
 		ms.SetAddresses()
 	} else {
 		data.lastTime = time.Now()

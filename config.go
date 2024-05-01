@@ -6,15 +6,24 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/nknorg/nkn-sdk-go"
 )
 
 // Config represents the configuration data
 type Config struct {
-	Seed  string `json:"seed"`
-	Title string `json:"title"`
-	Owner string `json:"owner"`
+	Seed        string   `json:"seed"`
+	Title       string   `json:"title"`
+	Owner       string   `json:"owner"`
+	Transcoders []string `json:transcoders`
+}
+
+type Transcode struct {
+	Resolution int
+	Framerate  int
 }
 
 // NewConfig reads the configuration file from a specified location and populates defaults
@@ -66,6 +75,76 @@ func NewConfig(configFile string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func getTranscoders(config *Config) []Transcode {
+	var transcoders = make([]Transcode, 0)
+
+	for _, v := range config.Transcoders {
+		transcodeStr := strings.Split(v, "p")
+		resolution, err := strconv.Atoi(transcodeStr[0])
+		if err != nil {
+			fmt.Println("Skipping invalid transcode value in config:", v)
+			continue
+		}
+
+		if sourceResolution <= resolution {
+			fmt.Println("Skipping transcode value in config:", v, "stream source is smaller:", sourceResolution)
+			continue
+		}
+
+		framerate := 30
+		if len(transcodeStr) == 2 && len(transcodeStr[1]) > 0 {
+			framerate, err = strconv.Atoi(transcodeStr[1])
+			if err != nil {
+				fmt.Println("Skipping invalid transcode value in config:", v)
+				continue
+			}
+		}
+
+		if framerate > sourceFramerate {
+			framerate = sourceFramerate
+			fmt.Println("Lowering transcode framerate value in config:", v, "stream source framerate:", sourceFramerate)
+		}
+
+		if sourceResolution == resolution && framerate == sourceFramerate {
+			fmt.Println("Skipping transcode value in config:", v, "stream source resolution and framerate are equal")
+			continue
+		}
+
+		transcoders = append(transcoders, Transcode{
+			Resolution: resolution,
+			Framerate:  framerate,
+		})
+	}
+
+	return removeDuplicateTranscodes(transcoders)
+}
+
+func removeDuplicateTranscodes(transcodes []Transcode) []Transcode {
+	// Sort the unique slice by resolution (descending) and then framerate (descending)
+	sort.SliceStable(transcodes, func(i, j int) bool {
+		if transcodes[i].Resolution != transcodes[j].Resolution {
+			return transcodes[i].Resolution > transcodes[j].Resolution // Descending order for resolution
+		}
+		return transcodes[i].Framerate > transcodes[j].Framerate // Descending order for framerate
+	})
+
+	// Create a map to store seen resolutions and their corresponding framerates
+	seen := make(map[int]int)
+	var unique []Transcode
+
+	// Loop through the original slice
+	for _, transcode := range transcodes {
+		// Check if the resolution is already seen
+		if prevFramerate, ok := seen[transcode.Resolution]; !ok || transcode.Framerate > prevFramerate {
+			// If not seen or framerate is higher, update seen map and add to unique slice
+			seen[transcode.Resolution] = transcode.Framerate
+			unique = append(unique, transcode)
+		}
+	}
+
+	return unique
 }
 
 func generateMediaMTXConfig() {

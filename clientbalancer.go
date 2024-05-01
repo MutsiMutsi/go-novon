@@ -8,9 +8,22 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/nknorg/nkn-sdk-go"
 	"github.com/nknorg/nkn-sdk-go/payloads"
+	"github.com/nknorg/nkngomobile"
 )
 
 var clientSendIndex = 0
+
+func getNextClient() *nkn.Client {
+	clientId := clientSendIndex % NUM_SUB_CLIENTS
+	client := client.GetClient(clientId)
+	clientSendIndex++
+
+	if client == nil {
+		client = getNextClient()
+	}
+
+	return client
+}
 
 func publish(data []byte) {
 	//Foreach chunk generate a message id and predefine the payload to reuse
@@ -24,9 +37,53 @@ func publish(data []byte) {
 
 	//Send VIEWER_SUB_CLIENTS times everytime with the next subclient in queue
 	for i := 0; i < VIEWER_SUB_CLIENTS; i++ {
-		clientId := clientSendIndex % NUM_SUB_CLIENTS
-		go client.GetClient(clientId).SendPayload(viewerSubClientAddresses[i], msgPayload, segmentSendConfig)
-		clientSendIndex++
+		go getNextClient().SendPayload(viewerSubClientAddresses[i], msgPayload, segmentSendConfig)
+	}
+}
+
+func publishQualityLevels(qualityData ...[][]byte) {
+	qualityLevels := len(qualityData)
+	qualityAddrStrings := make([][]string, qualityLevels)
+	qualityNknAddrStrings := make([][]*nkngomobile.StringArray, qualityLevels)
+
+	// Build address slices
+	for i := range qualityData {
+		qualityNknAddrStrings[i] = make([]*nkngomobile.StringArray, VIEWER_SUB_CLIENTS)
+	}
+
+	// Build viewer lists for each quality
+	for k, _ := range viewers.messages {
+		qualityLevel := min(viewers.viewerQuality[k], qualityLevels)
+		qualityAddrStrings[qualityLevel] = append(qualityAddrStrings[qualityLevel], k)
+	}
+
+	// Convert to multiclient recipient nkn addreses
+	for q := 0; q < qualityLevels; q++ {
+		// Preprocess addresses for this quality level (similar to original code)
+		for j := 0; j < VIEWER_SUB_CLIENTS; j++ {
+			prefixedAddresses := make([]string, len(qualityAddrStrings[q]))
+			for k, viewer := range qualityAddrStrings[q] {
+				prefixedAddresses[k] = "__" + strconv.Itoa(j) + "__." + viewer
+			}
+			qualityNknAddrStrings[q][j] = nkn.NewStringArray(prefixedAddresses...)
+		}
+	}
+
+	// Send the chunks to each quality level
+	for q := 0; q < qualityLevels; q++ {
+		for _, v := range qualityData[q] {
+			msgId, _ := nkn.RandomBytes(nkn.MessageIDSize)
+			msgPayload := &payloads.Payload{
+				Type:      payloads.PayloadType_BINARY,
+				NoReply:   true,
+				MessageId: msgId,
+				Data:      v,
+			}
+
+			for i := 0; i < VIEWER_SUB_CLIENTS; i++ {
+				go getNextClient().SendPayload(qualityNknAddrStrings[q][i], msgPayload, segmentSendConfig)
+			}
+		}
 	}
 }
 
@@ -48,9 +105,7 @@ func publishText(text string) {
 
 	//Send VIEWER_SUB_CLIENTS times everytime with the next subclient in queue
 	for i := 0; i < VIEWER_SUB_CLIENTS; i++ {
-		clientId := clientSendIndex % NUM_SUB_CLIENTS
-		go client.GetClient(clientId).SendPayload(viewerSubClientAddresses[i], msgPayload, segmentSendConfig)
-		clientSendIndex++
+		go getNextClient().SendPayload(viewerSubClientAddresses[i], msgPayload, segmentSendConfig)
 	}
 }
 
@@ -64,13 +119,11 @@ func sendToClient(address string, data []byte) {
 	}
 
 	for i := 0; i < VIEWER_SUB_CLIENTS; i++ {
-		clientId := clientSendIndex % NUM_SUB_CLIENTS
-		go client.GetClient(clientId).SendPayload(nkn.NewStringArray("__"+strconv.Itoa(i)+"__."+address), msgPayload, &nkn.MessageConfig{
+		go getNextClient().SendPayload(nkn.NewStringArray("__"+strconv.Itoa(i)+"__."+address), msgPayload, &nkn.MessageConfig{
 			Unencrypted:       true,
 			NoReply:           true,
 			MaxHoldingSeconds: 0,
 		})
-		clientId++
 	}
 }
 
@@ -81,13 +134,11 @@ func reply(data []byte, msg *nkn.Message) {
 	}
 
 	for i := 0; i < VIEWER_SUB_CLIENTS; i++ {
-		clientId := clientSendIndex % NUM_SUB_CLIENTS
-		go client.GetClient(clientId).SendPayload(nkn.NewStringArray("__"+strconv.Itoa(i)+"__."+msg.Src), payload, &nkn.MessageConfig{
+		go getNextClient().SendPayload(nkn.NewStringArray("__"+strconv.Itoa(i)+"__."+msg.Src), payload, &nkn.MessageConfig{
 			Unencrypted:       true,
 			NoReply:           true,
 			MaxHoldingSeconds: 0,
 		})
-		clientId++
 	}
 }
 
@@ -98,12 +149,10 @@ func replyText(text string, msg *nkn.Message) {
 	}
 
 	for i := 0; i < VIEWER_SUB_CLIENTS; i++ {
-		clientId := clientSendIndex % NUM_SUB_CLIENTS
-		go client.GetClient(clientId).SendPayload(nkn.NewStringArray("__"+strconv.Itoa(i)+"__."+msg.Src), payload, &nkn.MessageConfig{
+		go getNextClient().SendPayload(nkn.NewStringArray("__"+strconv.Itoa(i)+"__."+msg.Src), payload, &nkn.MessageConfig{
 			Unencrypted:       true,
 			NoReply:           true,
 			MaxHoldingSeconds: 0,
 		})
-		clientId++
 	}
 }
