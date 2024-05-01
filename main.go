@@ -174,14 +174,10 @@ func receiveMessages() {
 				go replyText(strconv.Itoa(len(viewerAddresses)), msg)
 			} else if len(msg.Data) == 10 && string(msg.Data[:]) == "donationid" {
 				go replyText(generateDonationEntry(), msg)
-			} else if len(msg.Data) == 8 && string(msg.Data[:]) == "quality0" {
-				viewers.viewerQuality[msg.Src] = 0
-				go replyText(strconv.Itoa(segmentId), msg)
-			} else if len(msg.Data) == 8 && string(msg.Data[:]) == "quality1" {
-				viewers.viewerQuality[msg.Src] = 1
-				go replyText(strconv.Itoa(segmentId), msg)
-			} else if len(msg.Data) == 8 && string(msg.Data[:]) == "quality2" {
-				viewers.viewerQuality[msg.Src] = 2
+			} else if len(msg.Data) == 8 && strings.Contains(string(msg.Data[:]), "quality") {
+				qLevelStr, _ := strings.CutPrefix(string(msg.Data[:]), "quality")
+				qLevel, _ := strconv.Atoi(qLevelStr)
+				viewers.viewerQuality[msg.Src] = qLevel
 				go replyText(strconv.Itoa(segmentId), msg)
 			} else {
 				DecodeMessage(msg)
