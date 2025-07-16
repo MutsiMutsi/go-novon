@@ -4,7 +4,7 @@ go 1.24.5
 
 require github.com/wailsapp/wails/v2 v2.10.2
 
-require github.com/MutsiMutsi/NovonApp v0.0.0
+require github.com/MutsiMutsi/go-novon v0.0.0
 
 require (
 	code.cloudfoundry.org/bytefmt v0.0.0 // indirect
@@ -138,7 +138,7 @@ require (
 )
 
 // replace github.com/wailsapp/wails/v2 v2.10.2 => C:\Users\mitch\go\pkg\mod
-replace github.com/MutsiMutsi/NovonApp v0.0.0 => ../..
+replace github.com/MutsiMutsi/go-novon v0.0.0 => ../..
 
 replace code.cloudfoundry.org/bytefmt => github.com/cloudfoundry/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 

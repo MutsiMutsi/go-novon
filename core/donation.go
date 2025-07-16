@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/MutsiMutsi/NovonApp/core/json"
+	"github.com/MutsiMutsi/go-novon/core/json"
 	"github.com/golang/protobuf/proto"
 	"github.com/nknorg/nkn-sdk-go"
 	"github.com/nknorg/nkn/common"

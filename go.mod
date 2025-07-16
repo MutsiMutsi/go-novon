@@ -1,4 +1,4 @@
-module github.com/MutsiMutsi/NovonApp
+module github.com/MutsiMutsi/go-novon
 
 go 1.24.5
 

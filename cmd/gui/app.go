@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"github.com/MutsiMutsi/NovonApp/core"
+	"github.com/MutsiMutsi/go-novon/core"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
