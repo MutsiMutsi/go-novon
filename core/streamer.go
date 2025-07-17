@@ -29,9 +29,10 @@ type Streamer struct {
 	isActive bool
 	quit     chan struct{}
 
-	nknClient   *nkn.MultiClient
-	mtxCore     *mtx.Core
-	transcoders []Transcode
+	nknClient      *nkn.MultiClient
+	mtxCore        *mtx.Core
+	transcoders    []Transcode
+	connectedCount int
 
 	EventHandler     Event
 	lastRtmpSegment  time.Time
@@ -147,10 +148,6 @@ func (s *Streamer) Start() error {
 	s.EventHandler.Emit(payload)
 
 	s.isActive = true
-
-	fmt.Println("Welcome to go-novon a golang client for RTMP streaming to novon")
-	fmt.Println("")
-
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var err error
@@ -199,22 +196,25 @@ func (s *Streamer) reportNumClients(ctx context.Context) {
 				log.Println("maintainStream: stopping")
 				return
 			default:
-				time.Sleep(time.Second * 3)
+				time.Sleep(time.Second / 60.0)
 
-				connectedCount := NUM_SUB_CLIENTS
+				newConnectedCount := 0
 				for _, v := range s.nknClient.GetClients() {
-					if v.IsClosed() {
-						connectedCount--
+					if v.HasConnection {
+						newConnectedCount++
 					}
 				}
 
-				payload := map[string]string{
-					"Type":       "NKN_UPDATE",
-					"NumClients": strconv.Itoa(connectedCount),
-					"Status":     "Connected",
-				}
+				if newConnectedCount != s.connectedCount {
+					s.connectedCount = newConnectedCount
 
-				s.EventHandler.Emit(payload)
+					payload := map[string]string{
+						"Type":       "NKN_UPDATE",
+						"NumClients": strconv.Itoa(s.connectedCount),
+						"Status":     "Connected",
+					}
+					s.EventHandler.Emit(payload)
+				}
 			}
 		}
 	}()
@@ -255,43 +255,22 @@ func (s *Streamer) createClient() *nkn.MultiClient {
 		log.Panic(err)
 	}
 
-	client, _ := nkn.NewMultiClient(account, "", NUM_SUB_CLIENTS, false, &nkn.ClientConfig{
-		ConnectRetries:   10,
-		AllowUnencrypted: true,
+	client, _ := nkn.NewMultiClientV2(account, "", &nkn.ClientConfig{
+		MultiClientNumClients:     NUM_SUB_CLIENTS,
+		MultiClientOriginalClient: false,
+		ConnectRetries:            10,
+		AllowUnencrypted:          true,
 	})
 
-	connectedClientsCount := 0
-
 	//5% startup connection leniency, improves startup time dramatically with minimal risk for service disruption.
-	for i := 0; i < NUM_SUB_CLIENTS-(NUM_SUB_CLIENTS/20); i++ {
-		<-client.OnConnect.C
-		connectedClientsCount++
+	<-client.OnConnect.C
 
-		payload := map[string]string{
-			"Type":       "NKN_UPDATE",
-			"NumClients": strconv.Itoa(connectedClientsCount),
-			"Status":     "Starting",
-		}
-		s.EventHandler.Emit(payload)
+	payload := map[string]string{
+		"Type":       "NKN_UPDATE",
+		"NumClients": strconv.Itoa(1),
+		"Status":     "Starting",
 	}
-
-	//Then wait for the rest!
-	go func() {
-		for i := 0; i < NUM_SUB_CLIENTS/20; i++ {
-			<-client.OnConnect.C
-			connectedClientsCount++
-
-			payload := map[string]string{
-				"Type":       "NKN_UPDATE",
-				"NumClients": strconv.Itoa(connectedClientsCount),
-				"Status":     "Connected",
-			}
-			s.EventHandler.Emit(payload)
-		}
-	}()
-
-	log.Println("connected to NKN")
-	log.Println("Your address", client.Address())
+	s.EventHandler.Emit(payload)
 
 	return client
 }

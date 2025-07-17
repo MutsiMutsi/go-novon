@@ -18,7 +18,7 @@ type Config struct {
 	Seed        string   `json:"seed"`
 	Title       string   `json:"title"`
 	Owner       string   `json:"owner"`
-	Transcoders []string `json:transcoders`
+	Transcoders []string `json:"transcoders"`
 }
 
 type Transcode struct {

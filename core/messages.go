@@ -86,6 +86,12 @@ func (s *Streamer) HandleChatMessage(msg *ChatMessage, nknMessage *nkn.Message) 
 		if err != nil {
 			panic(err)
 		}
+
+		s.EmitEvent("CHAT", map[string]string{
+			"Src":  msg.Src,
+			"Text": msg.Text,
+		})
+
 		s.publish(binary)
 	}()
 }

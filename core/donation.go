@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/MutsiMutsi/go-novon/core/json"
-	"github.com/golang/protobuf/proto"
 	"github.com/nknorg/nkn-sdk-go"
-	"github.com/nknorg/nkn/common"
-	"github.com/nknorg/nkn/pb"
+	"github.com/nknorg/nkn/v2/common"
+	"github.com/nknorg/nkn/v2/pb"
+	"google.golang.org/protobuf/proto"
 )
 
 var donationRegex = regexp.MustCompile(`donate[0-9]+`)

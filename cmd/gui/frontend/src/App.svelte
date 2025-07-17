@@ -30,7 +30,6 @@
         rtmpState = "Offline";
         break;
       case "FFMPEG_UPDATE":
-        console.log(data);
         if (data.IsInstalled === "FALSE") {
           showDialog = true;
 
@@ -66,6 +65,21 @@
           }
         }
         break;
+      case "CHAT":
+        if (data.Text && data.Src) {
+          messages = [...messages, { src: data.Src, text: data.Text }];
+
+          if (messages.length > maxMessages) {
+            messages = messages.slice(-maxMessages); // keep last maxMessages only
+          }
+
+          setTimeout(() => {
+            if (messageEndRef) {
+              messageEndRef.scrollIntoView({ behavior: "smooth" });
+            }
+          }, 0);
+        }
+        break;
       default:
         console.log(data);
         break;
@@ -82,6 +96,12 @@
 
   let startTime = Date.now();
   let uptime = "";
+
+  let messages = [];
+  const maxMessages = 100;
+
+  // Scroll ref
+  let messageEndRef;
 
   // Update `uptime` every second
   const interval = setInterval(() => {
@@ -277,6 +297,23 @@
 
       <div class="row">
         <div class="twelve columns">
+          <h5>💬 Chat Messages</h5>
+          <div class="chat-box">
+            {#each messages as message}
+              <div class="chat-message">
+                <strong class="chat-message-username"
+                  >{message.src.substring(0, 6)}</strong
+                >
+                <span class="chat-message-text">{message.text}</span>
+              </div>
+            {/each}
+            <div bind:this={messageEndRef}></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="twelve columns">
           {#if !streamActive && nknStatus.status != "Starting"}
             <button class="button u-full-width" on:click={startBackend}>
               ▶️ Start GoNovon
@@ -318,5 +355,44 @@
     box-sizing: border-box;
     overflow-x: hidden;
     white-space: pre;
+  }
+
+  .chat-box {
+    color: #e0e0e0;
+    background: #29292910;
+    border: 1px solid #000000da;
+    padding: 1rem;
+    max-height: 200px;
+    overflow-y: auto;
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+
+  .chat-message {
+    margin-bottom: 0.5rem;
+    word-wrap: break-word;
+    text-align: left; /* ← Force left alignment */
+    border: rgb(0, 0, 0);
+    border-style: solid;
+    border-width: 1px;
+    padding: 2px;
+    border-radius: 3px;
+    background: #1f1f1f;
+  }
+
+  .chat-message-username {
+    display: inline-flex;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: monospace;
+    font-size: 10pt;
+  }
+
+  .chat-message-text {
+    margin-left: 16px;
+    display: inline;
+    width: 500px;
+    font-family: monospace;
+    font-size: 9pt;
   }
 </style>
