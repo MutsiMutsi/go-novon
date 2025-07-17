@@ -475,6 +475,8 @@ func (s *Streamer) publishTSPart(segment []byte) {
 
 		log.Println("Receiving codec:", s.sourceCodec, "resolution:", s.sourceResolution, "framerate:", s.sourceFramerate)
 
+		s.EmitEvent("VIDEO_INFO", info)
+
 		s.transcoders = s.getTranscoders(s.config)
 		for _, v := range s.transcoders {
 			log.Println("Stream will be transcoded in:", v.Resolution, "p", v.Framerate)

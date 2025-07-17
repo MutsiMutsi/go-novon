@@ -17,9 +17,13 @@
         break;
       case "RTMP_PUBLISH":
         rtmpState = "Streaming";
+        startTime = Date.now();
         break;
       case "PUBLISH":
-        rtmpState = "Streaming";
+        if (rtmpState != "Streaming") {
+          rtmpState = "Streaming";
+          startTime = Date.now();
+        }
         publishStatus = data;
         break;
       case "RTMP_TERMINATED":
@@ -76,6 +80,21 @@
   let rtmpState = "Offline";
   let rtmpPort = "";
 
+  let startTime = Date.now();
+  let uptime = "";
+
+  // Update `uptime` every second
+  const interval = setInterval(() => {
+    uptime = formatDuration(Date.now() - startTime);
+  }, 1000);
+
+  // Optional: clean up on destroy
+  import { onDestroy } from "svelte";
+  onDestroy(() => {
+    clearInterval(interval);
+    stopBackend();
+  });
+
   let nknStatus = {
     clients: 0,
     status: "Offline",
@@ -88,6 +107,55 @@
     segmentSize: 0,
     numChunks: 0,
   };
+
+  function formatDuration(ms) {
+    const seconds = Math.floor(ms / 1000) % 60;
+    const minutes = Math.floor(ms / (1000 * 60)) % 60;
+    const hours = Math.floor(ms / (1000 * 60 * 60)) % 24;
+    const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0 || days > 0) parts.push(`${hours}h`);
+    if (minutes > 0 || hours > 0 || days > 0) parts.push(`${minutes}m`);
+    parts.push(`${seconds}s`);
+
+    return parts.join(" ");
+  }
+
+  /**
+   * Format bytes as human-readable text.
+   *
+   * @param bytes Number of bytes.
+   * @param si True to use metric (SI) units, aka powers of 1000. False to use
+   *           binary (IEC), aka powers of 1024.
+   * @param dp Number of decimal places to display.
+   *
+   * @return Formatted string.
+   */
+  function humanFileSize(bytes, si = false, dp = 1) {
+    const thresh = si ? 1000 : 1024;
+
+    if (Math.abs(bytes) < thresh) {
+      return bytes + " B";
+    }
+
+    const units = si
+      ? ["kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+      : ["KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"];
+    let u = -1;
+    const r = 10 ** dp;
+
+    do {
+      bytes /= thresh;
+      ++u;
+    } while (
+      Math.round(Math.abs(bytes) * r) / r >= thresh &&
+      u < units.length - 1
+    );
+
+    return bytes.toFixed(dp) + " " + units[u];
+  }
 
   async function startBackend() {
     const result = await StartStream();
@@ -146,7 +214,7 @@
       <div class="row">
         <!-- Stream Server Status -->
         <div class="six columns">
-          <h5>📡 Streaming Server</h5>
+          <h5>📡 Novon Stream</h5>
           <p>
             <strong>Status:</strong>
             {rtmpState}
@@ -161,24 +229,39 @@
             />
           {/if}
           {#if rtmpState == "Streaming"}
-            <p>
-              <strong>Viewers:</strong>
-              <code>{publishStatus.numViewers}</code>
-            </p>
-            <p>
-              <strong>Segment Size:</strong>
-              <code>{publishStatus.segmentSize}</code>
-            </p>
-            <p>
-              <strong>Segment Chunks:</strong>
-              <code>{publishStatus.numChunks}</code>
-            </p>
+            <div class="row">
+              <div class="six columns">
+                <p>
+                  <strong>Stream Uptime:</strong><code>{uptime}</code>
+                </p>
+              </div>
+              <div class="six columns">
+                <p>
+                  <strong>Viewers:</strong>
+                  <code>{publishStatus.numViewers}</code>
+                </p>
+              </div>
+              <div class="row">
+                <div class="six columns">
+                  <p>
+                    <strong>Segment Size:</strong>
+                    <code>{humanFileSize(publishStatus.segmentSize)}</code>
+                  </p>
+                </div>
+                <div class="six columns">
+                  <p>
+                    <strong>Segment Chunks:</strong>
+                    <code>{publishStatus.numChunks}</code>
+                  </p>
+                </div>
+              </div>
+            </div>
           {/if}
         </div>
 
         <!-- NKN Node Status -->
         <div class="six columns">
-          <h5>🖥️ NKN Node</h5>
+          <h5>🖥️ NKN</h5>
           <p>
             <strong>Clients Connected:</strong>
             {nknStatus.clients}/96
@@ -225,11 +308,15 @@
     display: block;
     margin: auto;
   }
-
   code {
+    display: block;
+    width: 100%;
     background: #141414;
     padding: 0.2rem 0.4rem;
     border-radius: 3px;
     font-family: monospace;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    white-space: pre;
   }
 </style>
