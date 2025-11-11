@@ -34,11 +34,11 @@ Generally lower bitrates provide faster delivery, and allow for more viewers, lo
 
 - Settings -> Stream
   - Service: Custom
-  - Server: the location of the running gonovon application, if its on the same machine as your OBS application this would be http://127.0.0.1 or http://localhost
-  - Stream Key: name of your stream host path (this is not displayed on novon.tv but is required and can be used to utilize more features MediaMTX has to offer.
+  - Server: the location of the running gonovon application, if its on the same machine as your OBS application this would be "http://127.0.0.1" or "http://localhost/"
+  - Stream Key: "novon" (this is not displayed on novon.tv but is required and can be used to utilize more features MediaMTX has to offer
 - Settings -> Output -> Streaming
   - Video Encoder: x264 or if you have a recent NVIDIA GPU: NVIDIA NVENC H.264
-  - Keyframe interval: 2s
+  - Keyframe interval: 2s (you have to go into the advanced menu to change this)
   - Refer to the previous paragraph for more info on bitrate, codecs, and encoding configuration.
 
 Once go-novon is up and running you can at any time start and stop your stream.
@@ -51,4 +51,20 @@ Once go-novon is up and running you can at any time start and stop your stream.
 
 - nkn-sdk-go - [https://github.com/nknorg/nkn-sdk-go](https://github.com/nknorg/nkn-sdk-go) [Apache-2.0 license]
 
-  The nkn network is used to amplify and distribute your video stream by multicasting; minimizing bandwidth requirements for the host while being able to reach a large number of viewers
+  The nkn network is used to amplify and distribute your video stream by multicasting; minimizing bandwidth requirements for the host while being able to reach a large number of viewers (you DO NOT need to download the .ZIP from the nkn SDK github as all dependencies are included in the binary, you do however need to install FFMPEG seperatley)
+
+
+
+# Setup
+
+First you will want to install OBS studio for your platform (https://obsproject.com/download)
+
+Then you will want to configure OBS as shown above
+(you will also want to add "Display Capture" as a source on OBS to actually record your screen)
+
+Then Download the GoNovon .EXE from the releases (or build it yourself using the instructions above)
+
+Run the binary (.exe) and hit "Start GoNovon"
+<img width="1010" height="741" alt="Start Novon" src="https://github.com/user-attachments/assets/8fcdb8eb-3a87-4d2e-942d-d7a2ef7d453b" />
+
+Then as the last step click "Start Streaming" in the OBS UI, and you should be good to go!<img width="914" height="322" alt="OBS stream" src="https://github.com/user-attachments/assets/dd43c6e1-f7f5-4cd8-9b8e-f46266ea7569" />
