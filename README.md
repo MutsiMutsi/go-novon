@@ -82,12 +82,13 @@ To get the following profile:
 <img width="1398" height="1057" alt="image" src="https://github.com/user-attachments/assets/4055a292-912a-41c5-bc54-3fbe3b5dfa8a" />
 
 
-# Dependencies
+# Project Dependencies
+
 - MediaMTX - [https://github.com/bluenviron/mediamtx/](https://github.com/bluenviron/mediamtx/) [MIT license]
 
   A fork of MediaMTX is encapsulated to host the RTMP server and mux the stream to MPEG-TS segments for delivery
 
 - nkn-sdk-go - [https://github.com/nknorg/nkn-sdk-go](https://github.com/nknorg/nkn-sdk-go) [Apache-2.0 license]
 
-  The nkn network is used to amplify and distribute your video stream by multicasting; minimizing bandwidth requirements for the host while being able to reach a large number of viewers (you DO NOT need to download the .ZIP from the nkn SDK github as all dependencies are included in the binary, you do however need to install FFMPEG seperatley)
+  The nkn network is used to amplify and distribute your video stream by multicasting; minimizing bandwidth requirements for the host while being able to reach a large number of viewers.
 
